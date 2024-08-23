@@ -1,0 +1,71 @@
+function Task_S_C(handles)
+global  t0 tn h es1 es er GM
+ExactS_GenerF(handles);
+FU=0;
+M = 1; 
+N = 10;  de = 0:N-1;
+hc = nan(4,N,3);
+hc(:,:,1)=...                       %Airy
+[0.002*1.95.^de; 0.00296*1.191.^de; 0.0057*1.33.^de; 0.0061*1.4.^de];
+hc(:,:,2)=...                       %Bess
+[0.007*1.62.^de; 0.022*1.4.^de; 0.044*1.3.^de; 0.012*1.6.^de];
+hc(:,:,3)=...                       %Shro
+[0.025*1.4.^de; 0.045*1.4.^de; 0.045*1.25.^de; 0.1*1.3.^de];
+
+K = {[2 ]  [1 ] [1 ] };   %K = {[1 2] [1 150] [1 92]};  
+qK = numel(K{1});         % Ðº-Ð²Ð¾ Ð Ð¡(Ð½Ð°Ð±Ð¾Ñ€Ð¾Ð² Ðº-Ñ‚Ð¾Ð²)
+ms = 1:3; 
+fprintf('N=%d',N);  fprintf('\n');
+  
+                        % Ìåòîä Ìàãíóñà (m=4)
+TM = zeros(N,1);  EM = nan(N,1);  
+for i = 1:N, h = hc(4,i,FU);
+   t=maketimes(t0,tn,'stepsize',h);  n=numel(t); TS=0;
+   for l=1:M,tic; F=generate(GM,t); y=evolve(Y0,F); TS = toc+TS;end 
+   TM(i) = TS/M;   EM(i) = er(y,es1(t),n);  end
+    
+LEM = -log10(EM);  
+
+Sp = {{'-.k' '-.b' ':g' '-.g'}  ...
+     {'--k' '--b' ':b' '-.b'} {'-k' '-b' ':m' '-.m'}};
+cDS1 = {@cDS11 @cDS21 @cDS31};
+DS1  = {@DS11  @DS21  @DS31};  
+naLmn = {'\\lambda = ' '\\lambda, \\mu = ' '\\lambda, \\mu, \\nu = '};
+n0s = [4 6 8];  Ti = nan(N,qK,3);  Er = Ti;
+Leg = {'Magnus' '' '' ''}; W=0;
+   
+for s = 1  % 1:qh       % methods   50000-5000  36000-3000   14800-2500
+   if ishandle(FU), close(FU); end %0.002-0.02  0.0028-0.033 0.007-0.04 
+   figure(FU);hold on; plot(LEM,TM,'-r','LineWidth',1.2);
+   %title(sprintf('%s eq.',file));  
+      
+   for m = ms
+      Cms = C{m}{s};  n0 = n0s(m); 
+      cDSm = cDS1{m}; DSm = DS1{m}; 
+         
+      for i = 1:N,    h = hc(m,i,FU);
+         t = maketimes(t0,tn,'stepsize',h);  n = numel(t);
+         tic; F = geneRS(GM,t); tocF = toc;         
+         ye1 = es1(t);
+         y0  = es (t(1:n0));  
+         q = 0;  TS = 0; iL = qK*(m-1)+1;
+            
+         for k = K{m}
+            q = q+1; W=W+1;
+            if mod(W,200)==0,fprintf('%.f ',W/100);end;  
+            Lmn = Cms(k,1:m);   b = cDSm(Lmn);
+            Leg{iL+q} = sprintf...
+            (['m=%d %d) ' naLmn{m} '%s'],m,k,sprintf('%g  ',Lmn));
+            for l=1:M, tic; y = DSm(y0,h,b,F,Lmn); TS = TS+toc;end  
+            Eri = er(y,ye1,n); 
+            if Eri > 1, Er(i,q,m) = NaN; else Er(i,q,m) = Eri;end
+            Ti(i,q,m) = TS/M+tocF; end,end  
+      
+      LE = -log10(Er);
+      %plot(LE(:,:,m),Ti(:,:,m));end
+      for q=1:qK, plot(LE(:,q,m),Ti(:,q,m),Sp{m}{q},'LineWidth',1.2);
+      end,end
+ 
+   legend(Leg,'Location','northwest'); 
+   xlabel('-log_{10}E'); ylabel('Time');
+   hold off; end

@@ -1,0 +1,57 @@
+%                    Inhomogeneous 
+% Calc of solution of Inhomogeneous Linear ODE y'=GM*y by DScheme of order10
+%  - Highest Order Stable Difference Scheme(HOS_DS) 10 = 2m+4, m = 3
+%    ( Mathcad-files DS10, DS12)
+% alfa = ( 1 La mu 3nu 0 3nu mu La  1) 
+% beta = (b4 b3 b2  b1 b0 b1 b2 b3 b4);  b = [b1,..., b5], b(5) = b0
+% GM   -  generator matrix
+% t    = [t0; t0+h; ..., tf = tn]
+% y0   - initial value
+% h    - t-step size
+% Lmn  = [ Lambda, Mu, Nu ]
+% b    =  beta = [ b1, b2, b3, b4, b5 ],  b5 = beta0
+% es   - etalon solution
+ 
+function y = ds10LI( GM, t, y0, op, varargin) 
+
+Farg = varargin; 
+h=op{1};  Lmn=op{4}; b=op{5}; zam=op{6};  % AT=op{3};
+n = numel(t);  % n - number of t-points
+G = cell(1,n); g = G;
+for i = 1:n,  G{i} = GM(t(i)); g{i} = gv(t(i)); end 
+
+
+
+t_n0 = t(1:8);        % m = 3;  n0 = 2*m+2 = 8; 
+M = size(y0,1);    % number of coordinates of y
+
+if isvector(y0)
+   f  = op{2};  
+   nm = zam;
+   setms = { @dopset @odeset};  
+   mets  = { @dop853 @ode113_c};         
+   warning('off','all')
+   opt = setms{nm}('InitialStep',h,'RelTol',eps,'AbsTol',eps);   
+   [t_, y0, nf] = mets{nm}( f, t_n0, y0, opt, Farg{:} ); 
+   y0 = y0';
+   warning('on','all');  end
+
+y = nan(M,n);
+y(:,1:8) = y0;              
+
+hb = h*b;   La = Lmn(1);  mu = Lmn(2);  nu3 = 3*Lmn(3);
+
+for i = 5:n-4
+   S4 = -hb(4)*G{i+4};
+   for j = 1:M,  S4(j,j) = 1+S4(j,j);  end
+   
+   r = hb(4)*g{i+4}+La*(y(:,i-1)-y(:,i+1)) + mu*(y(:,i-2)-y(:,i+2)) ...
+     + nu3*(y(:,i-3)-y(:,i+3)) + y(:,i-4) ...
+     + hb(1)*(G{i-1}*y(:,i-1)+g{i-1}  + G{i+1}*y(:,i+1)+g{i+1}) ...
+     + hb(2)*(G{i-2}*y(:,i-2)+g{i-2}  + G{i+2}*y(:,i+2)+g{i+2}) ...
+     + hb(3)*(G{i-3}*y(:,i-3)+g{i-3}  + G{i+3}*y(:,i+3)+g{i+3}) ...
+     + hb(4)* G{i-4}*y(:,i-4)+g{i-4}  + hb(5) *G{i}*y(:,i)+g{i+5};
+ 
+   y(:,i+4) = linsolve(S4, r); end
+
+y = y';

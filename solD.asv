@@ -1,0 +1,17 @@
+% Period error depending on iv at CN coordinate of solution
+% View of error depends on key
+            
+function er = solD(t,iv,key,y0,CN,h,nt,a,RT0,kT,WImet,RPmet,SPmet,WIop,RPop,SPop)
+global TE      % T exact 
+
+[y, TE, Tm] = APS(iv,t,y0,CN,h,nt,a,RT0,kT,...
+                 WImet,RPmet,SPmet,WIop,RPop,SPop); 
+
+warning('off','all'); 
+y0(CN) = iv;
+[to,y,nuf] = WImet(@RHFN,[t(1) t(1)+TE(1)],y0,WIop,a,4);        
+warning('on','all');       
+
+er = abs(y(end,CN)-iv);                       % abs err:  key ~= 2; 3
+if     key == 2, er = er/abs(iv);             % rel err:  key = 2
+elseif key == 3, er = er*(1+1/abs(iv)); end   % mix err:  key = 3

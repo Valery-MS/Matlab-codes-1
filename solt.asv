@@ -1,0 +1,19 @@
+% Period error depending on t at CN coordinate of solution
+% View of error depends on key
+% CN - Chaning Initial Value Index
+% (tM,yM) - extremum point in discret solution y(:,CN)
+
+function st = solt(t,iv,key,met,F,tM,yM,CN,op,varargin)
+
+global yTA  % y at Period T Accuraced
+if t == tM, st = abs(yM(CN)-iv);
+else      
+   op.InitialStep = (t-tM)*0.5;
+   warning('off','all');
+   [t_, y] = met(F,[tM t],yM,op,varargin{:});
+   warning('on','all');
+   yTA = y(end,:);
+   st  = abs(yTA(CN)-iv);  end
+
+if     key == 2, st = st/abs(iv);
+elseif key == 3, st = st*(1+1/abs(iv)); end
